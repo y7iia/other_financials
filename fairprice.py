@@ -339,7 +339,7 @@ def get_data_for_sector(sector):
      
      
 # Streamlit code
-st.title('حساب القيمة العادلة بأستخدام طريقة جراهام')
+st.title('حساب القيمة العادلة للسهم بأستخدام طريقة جراهام')
 st.markdown(' @telmisany - برمجة يحيى التلمساني')
 
 
