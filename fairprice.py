@@ -282,13 +282,19 @@ def calculate_graham_number_and_eps_type(row, factor):
         else:
             eps = row['trailingEps']
             eps_type = 'Trailing'
-        # Calculate Graham number and round to 2 decimal places
-        graham_number = round(np.sqrt(factor * eps * row['bookValue']), 2)
+        
+        # Check if trailingEps is negative
+        if eps < 0:
+            graham_number = '-'
+        else:
+            # Calculate Graham number and round to 2 decimal places
+            graham_number = round(np.sqrt(factor * eps * row['bookValue']), 2)
+        
         return graham_number, eps_type
     except Exception as e:
         logging.error(f"Error calculating Graham number for row {row['symbol']}: {e}")
         return np.nan, None
-
+     
 def get_data_for_sector(sector):
     try:
         stock_codes = tasi[sector]
