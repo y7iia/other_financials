@@ -274,22 +274,36 @@ def fetch_data_for_stock(stock):
         return pd.DataFrame()
 
 def calculate_graham_number_and_eps_type(row, factor):
+    eps = None
+    eps_type = None
+
     try:
-        # Use forward EPS if available, else use trailing EPS
+        # Use forward EPS if available
         if not pd.isna(row['forwardEps']):
             eps = row['forwardEps']
             eps_type = 'Forward'
-        elif eps < 0:
-            graham_number = '-'
-        else:
+    except Exception as e:
+        logging.error(f"Error accessing forward EPS for row {row['symbol']}: {e}")
+
+    if eps is None or eps < 0:
+        try:
             eps = row['trailingEps']
             eps_type = 'Trailing'
+        except Exception as e:
+            logging.error(f"Error accessing trailing EPS for row {row['symbol']}: {e}")
+            return np.nan, None
+
+    try:
         # Calculate Graham number and round to 2 decimal places
-        graham_number = round(np.sqrt(factor * eps * row['bookValue']), 2)
-        return graham_number, eps_type
+        if eps >= 0:
+            graham_number = round(np.sqrt(factor * eps * row['bookValue']), 2)
+            return graham_number, eps_type
+        else:
+            return '-', eps_type
     except Exception as e:
         logging.error(f"Error calculating Graham number for row {row['symbol']}: {e}")
         return np.nan, None
+     
 
 def get_data_for_sector(sector):
     try:
