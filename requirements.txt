@@ -1,5 +1,5 @@
 Python==3.8
-streamlit==1.27.0
+streamlit
 pandas
 yfinance
 numpy
