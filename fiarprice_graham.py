@@ -275,6 +275,7 @@ companies = {'1010.SR': 'الرياض',
  '8313.SR': 'رسن'
             }
 
+
 # Setup logging
 logging.basicConfig(filename='app.log', level=logging.ERROR)
 
@@ -298,19 +299,24 @@ def calculate_graham_number_and_eps_type(row, factor):
         else:
             eps = row['trailingEps']
             eps_type = 'Trailing'
+        
         # Calculate Graham number and round to 2 decimal places
-        graham_number = round(np.sqrt(factor * eps * row['bookValue']), 2)
+        if eps > 0:
+            graham_number = round(np.sqrt(factor * eps * row['bookValue']), 2)
+        else:
+            graham_number = '-'
+        
         return graham_number, eps_type
     except Exception as e:
         logging.error(f"Error calculating Graham number for row {row['symbol']}: {e}")
-        return np.nan, None
+        return '-', None
 
 def get_data_for_sector(sector):
     try:
         stock_codes = tasi[sector]
         data = [fetch_data_for_stock(code) for code in stock_codes]
         df = pd.concat(data, ignore_index=True)
-        columns_to_select = ['symbol','trailingEps','forwardEps','bookValue', 'currentPrice']
+        columns_to_select = ['symbol', 'trailingEps', 'forwardEps', 'bookValue', 'currentPrice']
         df = df[[col for col in columns_to_select if col in df.columns]]
         # Add 'company' column
         df['company'] = df['symbol'].copy()
@@ -319,8 +325,6 @@ def get_data_for_sector(sector):
         # Calculate Graham numbers and add new columns
         for factor in [22.5, 30, 50]:
             df[f'Graham_{factor}'], df['EPS_Type'] = zip(*df.apply(lambda row: calculate_graham_number_and_eps_type(row, factor), axis=1))
-        # Drop rows with missing 'Graham_22.5' values
-        #df = df.dropna(subset=['Graham_22.5'])
         # Reorder columns
         df = df[['symbol', 'company', 'trailingEps', 'forwardEps', 'bookValue', 'currentPrice', 'Graham_22.5', 'Graham_30', 'Graham_50']]
         # Set 'symbol' as index
@@ -345,19 +349,20 @@ def get_data_for_sector(sector):
         def color_cells(row):
             color = {}
             for col in ['تقييم متشدد', 'تقييم متساهل', 'تقييم متساهل جدا']:
-                color[col] = 'background-color: LightGreen' if row['السعر الحالي'] < row[col] else 'background-color: LightCoral'
+                if row[col] != '-':
+                    color[col] = 'background-color: LightGreen' if row['السعر الحالي'] < row[col] else 'background-color: LightCoral'
+                else:
+                    color[col] = ''
             return pd.Series(color)
         styled_df = df.style.apply(color_cells, axis=1)
         return styled_df
     except Exception as e:
         logging.error(f"Error getting data for sector {sector}: {e}")
         return pd.DataFrame()
-     
-     
+
 # Streamlit code
 st.title('حساب القيمة العادلة بأستخدام طريقة جراهام')
 st.markdown(' @telmisany - برمجة يحيى التلمساني')
-
 
 # User input
 sector = st.selectbox('اختار القطاع المطلوب', options=[''] + list(tasi.keys()))
