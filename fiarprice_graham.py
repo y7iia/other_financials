@@ -320,7 +320,7 @@ def get_data_for_sector(sector):
         for factor in [22.5, 30, 50]:
             df[f'Graham_{factor}'], df['EPS_Type'] = zip(*df.apply(lambda row: calculate_graham_number_and_eps_type(row, factor), axis=1))
         # Drop rows with missing 'Graham_22.5' values
-        df = df.dropna(subset=['Graham_22.5'])
+        #df = df.dropna(subset=['Graham_22.5'])
         # Reorder columns
         df = df[['symbol', 'company', 'trailingEps', 'forwardEps', 'bookValue', 'currentPrice', 'Graham_22.5', 'Graham_30', 'Graham_50']]
         # Set 'symbol' as index
