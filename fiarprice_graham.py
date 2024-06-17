@@ -275,7 +275,6 @@ companies = {'1010.SR': 'الرياض',
  '8313.SR': 'رسن'
             }
 
-
 # Setup logging
 logging.basicConfig(filename='app.log', level=logging.ERROR)
 
@@ -314,10 +313,30 @@ def calculate_graham_number_and_eps_type(row, factor):
 def get_data_for_sector(sector):
     try:
         stock_codes = tasi[sector]
-        data = [fetch_data_for_stock(code) for code in stock_codes]
-        df = pd.concat(data, ignore_index=True)
+        if not stock_codes:
+            st.warning(f"No stock codes found for sector: {sector}")
+            return pd.DataFrame()
+
+        data_frames = []
+        for code in stock_codes:
+            df = fetch_data_for_stock(code)
+            if df.empty:
+                logging.warning(f"No data fetched for stock {code}")
+            else:
+                data_frames.append(df)
+        
+        if not data_frames:
+            st.warning(f"No data available for the stocks in sector: {sector}")
+            return pd.DataFrame()
+
+        df = pd.concat(data_frames, ignore_index=True)
         columns_to_select = ['symbol', 'trailingEps', 'forwardEps', 'bookValue', 'currentPrice']
         df = df[[col for col in columns_to_select if col in df.columns]]
+        
+        if df.empty:
+            st.warning(f"DataFrame is empty after column selection for sector: {sector}")
+            return pd.DataFrame()
+
         # Add 'company' column
         df['company'] = df['symbol'].copy()
         # Replace symbols with company names
@@ -372,13 +391,15 @@ if st.button('Submit'):
     if sector:
         # Fetch and display data
         sector_data = get_data_for_sector(sector)
-        st.dataframe(sector_data)
+        if not sector_data.empty:
+            st.dataframe(sector_data)
+        else:
+            st.write("No data available for the selected sector.")
     else:
         st.write(":أختار القطاع المطلوب")
 
 # Fetch and display data
 sector_data = get_data_for_sector(sector)
-
 
 st.markdown('[تطبيقات أخرى قد تعجبك](https://twitter.com/telmisany/status/1702641486792159334)')
 # Add three empty lines for spacing
