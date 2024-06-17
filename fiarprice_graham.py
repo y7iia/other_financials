@@ -329,7 +329,7 @@ sector = st.selectbox('اختار القطاع المطلوب', options=[''] + l
 # Submit button
 if st.button('Submit'):
     if sector:
-        sector_stocks = tasi[sectors[sectors_reversed[sector]]]
+        sector_stocks = tasi[sector]
         
         # List of Graham factors
         graham_factors = [22.5, 30, 50]
