@@ -275,95 +275,49 @@ companies = {'1010.SR': 'الرياض',
  '8313.SR': 'رسن'
             }
 
-import streamlit as st
-import pandas as pd
-import yfinance as yf
-import numpy as np
-import logging
-
 # Setup logging
 logging.basicConfig(filename='app.log', level=logging.ERROR)
 
-def fetch_data_for_stock(stock):
+def calculate_graham_number(stock, graham_factor):
+    """Calculate and print the Graham number for a given stock."""
     try:
-        # Fetch data for a stock using yfinance
         data = yf.Ticker(stock).info
-        # Convert the dictionary into a DataFrame
-        df = pd.DataFrame([data])
-        return df
-    except Exception as e:
-        logging.error(f"Error fetching data for stock {stock}: {e}")
-        return pd.DataFrame()
+        eps_forward = data.get('forwardEps')
+        eps_trailing = data.get('trailingEps')
 
-def calculate_graham_number_and_eps_type(row, factor):
-    try:
-        # Use forward EPS if available, else use trailing EPS
-        if not pd.isna(row['forwardEps']):
-            eps = row['forwardEps']
-            eps_type = 'Forward'
+        # Choose EPS type
+        if eps_forward is not None:
+            eps = eps_forward
+            eps_type = "forward"
+        elif eps_trailing is not None:
+            eps = eps_trailing
+            eps_type = "trailing"
         else:
-            eps = row['trailingEps']
-            eps_type = 'Trailing'
-        
-        # Calculate Graham number and round to 2 decimal places
-        if eps > 0:
-            graham_number = round(np.sqrt(factor * eps * row['bookValue']), 2)
-        else:
-            graham_number = '-'
-        
-        return graham_number, eps_type
-    except Exception as e:
-        logging.error(f"Error calculating Graham number for row {row['symbol']}: {e}")
-        return '-', None
+            return '-', 'unknown', None, None, None
 
-def get_data_for_sector(sector):
-    try:
-        stock_codes = tasi[sector]
-        data = [fetch_data_for_stock(code) for code in stock_codes]
-        df = pd.concat(data, ignore_index=True)
-        columns_to_select = ['symbol', 'trailingEps', 'forwardEps', 'bookValue', 'currentPrice']
-        df = df[[col for col in columns_to_select if col in df.columns]]
-        # Add 'company' column
-        df['company'] = df['symbol'].copy()
-        # Replace symbols with company names
-        df['symbol'] = df['symbol'].replace(companies)
-        # Calculate Graham numbers and add new columns
-        for factor in [22.5, 30, 50]:
-            df[f'Graham_{factor}'], df['EPS_Type'] = zip(*df.apply(lambda row: calculate_graham_number_and_eps_type(row, factor), axis=1))
-        # Reorder columns
-        df = df[['symbol', 'company', 'trailingEps', 'forwardEps', 'bookValue', 'currentPrice', 'Graham_22.5', 'Graham_30', 'Graham_50']]
-        # Set 'symbol' as index
-        df = df.set_index('symbol')
-        # Rename index
-        df.index.names = ['الشركة']
-        # Rename columns
-        column_names = {
-            'company': 'الرمز',
-            'trailingEps': 'ربحية السهم الحالية',
-            'forwardEps': 'ربحية السهم المتوقعة',
-            'bookValue': 'القيمة الدفترية',
-            'currentPrice': 'السعر الحالي',
-            'Graham_22.5': 'تقييم متشدد',
-            'Graham_30': 'تقييم متساهل',
-            'Graham_50': 'تقييم متساهل جدا'
-        }
-        df = df.rename(columns=column_names)
-        # Round all floating-point numbers to two decimal places
-        df = df.round({col: 2 for col in df.select_dtypes(float).columns})
-        # Apply styling
-        def color_cells(row):
-            color = {}
-            for col in ['تقييم متشدد', 'تقييم متساهل', 'تقييم متساهل جدا']:
-                if row[col] != '-':
-                    color[col] = 'background-color: LightGreen' if row['السعر الحالي'] < row[col] else 'background-color: LightCoral'
-                else:
-                    color[col] = ''
-            return pd.Series(color)
-        styled_df = df.style.apply(color_cells, axis=1)
-        return styled_df
+        book_value = data.get('bookValue')
+        current_price = data.get('currentPrice')
+
+        # Ensure necessary data is available and valid
+        if eps is None or book_value is None or current_price is None:
+            return '-', 'unknown', current_price, eps, book_value
+
+        # Check if EPS is negative
+        if eps < 0:
+            return '-', eps_type, current_price, eps, book_value
+        else:
+            graham_number = round((graham_factor * eps * book_value) ** 0.5, 2)
+
+            # Check if the Graham number is far below the current price by 50% or more
+            if graham_number < current_price * 0.5:
+                return '-', eps_type, current_price, eps, book_value
+            else:
+                return graham_number, eps_type, current_price, eps, book_value
     except Exception as e:
-        logging.error(f"Error getting data for sector {sector}: {e}")
-        return pd.DataFrame()
+        # Map the stock symbol to a company name
+        company_name = companies.get(stock, "Unknown Company")
+        logging.error(f"An error occurred when processing {company_name} ({stock}): {e}")
+        return None, 'unknown', None, None, None  # Return None if an exception occurs
 
 # Streamlit code
 st.title('حساب القيمة العادلة بأستخدام طريقة جراهام')
@@ -375,14 +329,60 @@ sector = st.selectbox('اختار القطاع المطلوب', options=[''] + l
 # Submit button
 if st.button('Submit'):
     if sector:
-        # Fetch and display data
-        sector_data = get_data_for_sector(sector)
-        st.dataframe(sector_data)
+        sector_stocks = tasi[sectors[sectors_reversed[sector]]]
+        
+        # List of Graham factors
+        graham_factors = [22.5, 30, 50]
+
+        # Create a DataFrame to store the Graham numbers
+        graham_numbers = pd.DataFrame(columns=["Stock", "Company", "EPS_Type", "Current_Price", "EPS", "Book_Value"] + [f"Graham_{factor}" for factor in graham_factors])
+
+        for stock in sector_stocks:
+            row = {"Stock": stock}
+            # Get company name from dictionary
+            row["Company"] = companies.get(stock, "Unknown Company")
+            for factor in graham_factors:
+                graham_number, eps_type, current_price, eps, book_value = calculate_graham_number(stock, factor)
+                row[f"Graham_{factor}"] = graham_number
+                row["EPS_Type"] = eps_type
+                row["Current_Price"] = current_price
+                row["EPS"] = eps
+                row["Book_Value"] = book_value
+            # Append row to the DataFrame using pd.concat
+            graham_numbers = pd.concat([graham_numbers, pd.DataFrame([row])], ignore_index=True)
+
+        # Round numerical values to 2 decimal places
+        graham_numbers = graham_numbers.round(2)
+
+        # Rename the columns
+        graham_numbers = graham_numbers.rename(columns={
+            'Stock': 'الرمز',
+            'Company': 'الشركة',
+            'EPS_Type': 'نوع EPS',
+            'Graham_22.5': 'قيمة متحفظة',
+            'Graham_30': 'قيمة متساهلة',
+            'Graham_50': 'قيمة متساهلة جدا',
+            'Current_Price': 'السعر الحالي',
+            'EPS': 'EPS',
+            'Book_Value': 'القيمة الدفترية'
+        })
+
+        # Apply styling
+        def color_cells(row):
+            color = {}
+            for col in ['قيمة متحفظة', 'قيمة متساهلة', 'قيمة متساهلة جدا']:
+                if row[col] != '-':
+                    color[col] = 'background-color: LightGreen' if row['السعر الحالي'] < row[col] else 'background-color: LightCoral'
+                else:
+                    color[col] = ''
+            return pd.Series(color)
+
+        styled_df = graham_numbers.style.apply(color_cells, axis=1)
+
+        # Display the DataFrame
+        st.dataframe(styled_df)
     else:
         st.write(":أختار القطاع المطلوب")
-
-# Fetch and display data
-sector_data = get_data_for_sector(sector)
 
 st.markdown('[تطبيقات أخرى قد تعجبك](https://twitter.com/telmisany/status/1702641486792159334)')
 # Add three empty lines for spacing
