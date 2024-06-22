@@ -381,13 +381,13 @@ if st.button('Submit'):
         graham_numbers = graham_numbers.rename(columns={
             'Stock': 'الرمز',
             'Company': 'الشركة',
+            'Book_Value': 'القيمة الدفترية'
+            'EPS': 'ربحية السهم',
             'EPS_Type': 'نوع ربحية السهم',
             'Graham_22.5': 'قيمة متحفظة',
             'Graham_30': 'قيمة متساهلة',
             'Graham_50': 'قيمة متساهلة جدا',
-            'Current_Price': 'السعر الحالي',
-            'EPS': 'ربحية السهم',
-            'Book_Value': 'القيمة الدفترية'
+            'Current_Price': 'السعر الحالي'         
         })
 
         # Apply styling
