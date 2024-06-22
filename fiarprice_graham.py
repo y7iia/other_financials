@@ -307,17 +307,12 @@ def calculate_graham_number(stock, graham_factor):
             return '-', eps_type, current_price, eps, book_value
         else:
             graham_number = round((graham_factor * eps * book_value) ** 0.5, 2)
-
-            # Check if the Graham number is far below the current price by 50% or more
-            if graham_number < current_price * 0.5:
-                return '-', eps_type, current_price, eps, book_value
-            else:
-                return graham_number, eps_type, current_price, eps, book_value
+            return graham_number, eps_type, current_price, eps, book_value
     except Exception as e:
         # Map the stock symbol to a company name
         company_name = companies.get(stock, "Unknown Company")
         logging.error(f"An error occurred when processing {company_name} ({stock}): {e}")
-        return None, 'unknown', None, None, None  # Return None if an exception occurs
+        return None, 'unknown', None, None, None
 
 # Streamlit code
 st.title('حساب القيمة العادلة بأستخدام طريقة جراهام')
@@ -349,6 +344,7 @@ st.markdown('''
 ''')
 
 st.markdown(' @telmisany - برمجة يحيى التلمساني')
+
 
 # User input
 sector = st.selectbox('اختار القطاع المطلوب', options=[''] + list(tasi.keys()))
