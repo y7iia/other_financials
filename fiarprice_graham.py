@@ -288,10 +288,10 @@ def calculate_graham_number(stock, graham_factor):
         # Choose EPS type
         if eps_forward is not None:
             eps = eps_forward
-            eps_type = "forward"
+            eps_type = "المستقبلية"
         elif eps_trailing is not None:
             eps = eps_trailing
-            eps_type = "trailing"
+            eps_type = "الحالية"
         else:
             return '-', 'unknown', None, None, None
 
@@ -381,12 +381,12 @@ if st.button('Submit'):
         graham_numbers = graham_numbers.rename(columns={
             'Stock': 'الرمز',
             'Company': 'الشركة',
-            'EPS_Type': 'نوع EPS',
+            'EPS_Type': 'نوع ربحية السهم',
             'Graham_22.5': 'قيمة متحفظة',
             'Graham_30': 'قيمة متساهلة',
             'Graham_50': 'قيمة متساهلة جدا',
             'Current_Price': 'السعر الحالي',
-            'EPS': 'EPS',
+            'EPS': 'ربحية السهم',
             'Book_Value': 'القيمة الدفترية'
         })
 
