@@ -358,7 +358,7 @@ if st.button('Submit'):
         graham_factors = [22.5, 30, 50]
 
         # Create a DataFrame to store the Graham numbers
-        graham_numbers = pd.DataFrame(columns=["Stock", "Company", "EPS_Type", "Current_Price", "EPS", "Book_Value"] + [f"Graham_{factor}" for factor in graham_factors])
+        graham_numbers = pd.DataFrame(columns=["Stock", "Company", "Book_Value", "EPS", "EPS_Type", "Current_Price"] + [f"Graham_{factor}" for factor in graham_factors])
 
         for stock in sector_stocks:
             row = {"Stock": stock}
